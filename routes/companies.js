@@ -22,9 +22,28 @@ router.get('/', async (req, res, next ) => {
 router.get('/:code', async (req, res, next ) => {
   try {
     const { code } = req.params;
-    const results = await db.query(`SELECT * FROM companies WHERE code = $1`, [code] );
-    if (results.rows.length === 0) throw new ExpressError(`Company: '${code}' could not be found`, 404)
-    return res.json({"company": results.rows[0]})
+  
+    const compResult = await db.query(
+      `SELECT code, name, description
+       FROM companies
+       WHERE code = $1`,
+    [code]
+    );
+    const invResult = await db.query(
+      `SELECT id
+       FROM invoices
+       WHERE comp_code = $1`,
+    [code]
+    );
+
+    if (compResult.rows.length === 0) throw new ExpressError(`Company: '${code}' could not be found`, 404)
+
+    const company = compResult.rows[0];
+    const invoices = invResult.rows;
+    // company.invoices = invoices;
+    company.invoices = invoices.map(inv => inv.id);
+
+    return res.json({"company": company});
   } catch (error) {
     return next(error)
   }
@@ -50,10 +69,10 @@ router.post('/', async (req, res, next ) => {
  */
 router.put('/:code', async (req, res, next ) => {
   try {
-    const oldCode = req.params.code;
+    const codeParam = req.params.code;
     const { code, name, description} = req.body;
-    const results = await db.query(`UPDATE companies SET code=$1, name=$2, description=$3 WHERE code=$4 RETURNING code, name, description`, [code, name, description, oldCode] )
-    if (results.rowsCount === 0) throw new ExpressError(`Company with code of:'${code}' cannot be found`, 404)
+    const results = await db.query(`UPDATE companies SET code=$1, name=$2, description=$3 WHERE code=$4 RETURNING code, name, description`, [code, name, description, codeParam] )
+    if (results.rowCount === 0) throw new ExpressError(`Company with code of:'${codeParam}' cannot be found`, 404)
     return res.json({"company": results.rows[0]})
   } catch (error) {
     return next(error)

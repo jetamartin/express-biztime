@@ -23,9 +23,20 @@ router.get('/', async (req, res, next ) => {
 router.get('/:id', async (req, res, next ) => {
   try {
     const { id } = req.params;
-    const results = await db.query(`SELECT * FROM invoices WHERE id = $1`, [parseInt(id)] );
-    if (results.rows.length === 0) throw new ExpressError(`Invoces with id of '${id}' could not be found`, 404)
-    return res.json({"invoice": results.rows[0]})
+    const invResults = await db.query(`SELECT * FROM invoices WHERE id = $1`, [parseInt(id)] );
+    if (invResults.rows.length === 0) throw new ExpressError(`Invoices with id of '${id}' could not be found`, 404)
+
+    // debugger;
+    const comp_code = invResults.rows[0].comp_code;
+    const compResults = await db.query(`SELECT code, name, description FROM companies WHERE code = $1`, [comp_code])
+
+
+    const invoice = invResults.rows[0];
+    const company = compResults.rows[0];
+    invoice.company = company;
+    return res.json({"invoice": invoice})
+
+    // return res.json({"invoice": results.rows[0]})
   } catch (error) {
     return next(error)
   }
@@ -66,7 +77,6 @@ router.put('/:id', async (req, res, next ) => {
  * 
  */
 router.delete('/:id', async (req, res, next ) => {
-  debugger; 
   try {
     const { id } = req.params;
     const results = await db.query(`DELETE FROM invoices WHERE id = $1`, [parseInt(id)] )
