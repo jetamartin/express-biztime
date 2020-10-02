@@ -32,9 +32,11 @@ beforeEach(async () => {
 //   } );
 
 afterEach(async () => {
+  await db.query("SELECT setval('invoices_id_seq', 1, false)");
+  await db.query('TRUNCATE companies, invoices RESTART IDENTITY CASCADE;')
 
-  await db.query('DELETE FROM companies')
-  await db.query('DELETE FROM invoices')
+  // await db.query('DELETE FROM companies;')
+  // await db.query('DELETE FROM invoices;')
 })
 
 afterAll(async () => {
