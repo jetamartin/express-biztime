@@ -1,4 +1,5 @@
 process.env.NODE_ENV ='test';
+const { default: slugify } = require('slugify');
 const request = require('supertest');
 const app = require('../app');
 const db = require('../db');
@@ -7,17 +8,17 @@ let testCompanies;
 let testInvoices; 
 
 beforeEach(async () => {
-  const compResults = await db.query(`
+ const compResults = await db.query(`
     INSERT INTO
       companies (code, name, description)
-      VALUES ('apple', 'Apple Inc.', 'Maker of iOS')
+      VALUES ('apple-inc.', 'Apple Inc.', 'Maker of iOS')
       RETURNING code, name, description`);
     testCompanies = compResults.rows[0];
 
   const invResults = await db.query(`
     INSERT INTO 
       invoices (comp_code, amt, paid, paid_date)
-      VALUES ('apple', 100, true, '2018-01-01')
+      VALUES ('apple-inc.', 100, true, '2018-01-01')
       RETURNING id, comp_code, amt, paid, paid_date`);
 
   testInvoices = invResults.rows[0];
@@ -79,14 +80,13 @@ describe('GET /companies/:code', () => {
 describe('POST /companies', () => {
   test ("Create a new company", async () => {
     const response = await request(app).post('/companies').send({
-      'code': 'google',
       'name': 'Google Inc.',
       'description': 'Leader in web search engines'
     });
     expect(response.statusCode).toEqual(201);
     expect(response.body).toEqual({
       company: {
-        'code': 'google',
+        'code': slugify('Google Inc.',{lower: true}),
         'name': 'Google Inc.',
         'description': 'Leader in web search engines'
       }
@@ -97,17 +97,19 @@ describe('POST /companies', () => {
  /**
  * Editing an existing company's information
  */
+// describe('PUT /companies/:code', () => {
 describe('PUT /companies/:code', () => {
-  test ("Edit and existing company", async () => {
-    const response = await request(app).put(`/companies/${testCompanies.code}`).send({
-      code : 'apple',
+
+  test ("Edit an existing company", async () => {
+    const response = await request(app).put(`/companies/${slugify(testCompanies.name,{lower: true})}`).send({
+      // code : 'apple-inc',
       name: 'Apple Inc.',
       description: 'Charges 500% profit on everything'
     });
     expect(response.statusCode).toEqual(200);
     expect(response.body).toEqual({
       'company': {
-        'code': 'apple',
+        'code': 'apple-inc.',
         'name': 'Apple Inc.',
         'description': 'Charges 500% profit on everything'
       }
@@ -116,7 +118,7 @@ describe('PUT /companies/:code', () => {
    test ("Company code does not exist (Generate 404 response)", async () => {
     const response = await request(app).put(`/companies/XYZ`)
     .send({
-      'code': 'apple',
+      'code': 'apple-inc',
       'name': 'Apple Inc.',
       'description': 'Charges 500% profit on everything'
     });

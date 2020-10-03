@@ -46,12 +46,12 @@ afterAll(async () => {
 
 
 /**
- * Test GET a list of companies
+ * Test GET a list of invoices
  */
 describe('GET /invoices', () => {
  test ("Gets a list of invoices", async () => {
    const response = await request(app).get('/invoices');
-   debugger;
+  //  debugger;
    expect(response.statusCode).toEqual(200)
    expect(response.body).toEqual({
      invoices: [{
