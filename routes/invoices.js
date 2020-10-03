@@ -57,16 +57,49 @@ router.post('/', async (req, res, next ) => {
 })
 
 /**
- * Updates an existing company
+ * Updates an existing invoice
+ * If paying unpaid invoice: sets paid_date to today
+ * If un-paying: sets paid_date to null
+ *  Else: keep current paid_date
  * 
  */
 router.put('/:id', async (req, res, next ) => {
   try {
+
     const { id } = req.params;
-    const { amt} = req.body;
-    const results = await db.query(`UPDATE invoices SET amt=$1 WHERE id=$2 RETURNING *`, [parseInt(amt), parseInt(id)])
-    if (results.rowsCount === 0) throw new ExpressError(`Invoice with id of:'${id}' cannot be found`, 404)
+    const { amt, paid } = req.body;
+    let paidDate = null;
+    // debugger;
+    const currResults = await db.query(
+      `SELECT paid, paid_date
+       FROM invoices
+       WHERE id = $1`,
+    [id]);
+
+    if (currResults.rowsCount === 0) {
+      throw new ExpressError(`Invoice with id of:'${id}' cannot be found`, 404)
+    }
+
+    const currPaidDate = currResults.rows[0].paid_date;
+
+    
+    if (!currPaidDate && paid) { // User wants to pay invoice (paid = true) and current record has no paid date then set records paid_date to current date
+      paidDate = new Date(); 
+    } else if (!paid) {  // User does not want to pay invoice (Paid = false) so set current paid date to null
+      paidDate = null
+    } else {  // User wants to pay invoice and paid date already exist.
+      paidDate = currPaidDate;
+    }    
+
+    const results = await db.query(
+      `UPDATE invoices 
+       SET amt=$1, paid=$2, paid_date=$3 
+       WHERE id=$4 
+       RETURNING id, comp_code, amt, paid, add_date, paid_date`, 
+       [amt, paid, paidDate, id])
+
     return res.json({"invoice": results.rows[0]})
+
   } catch (error) {
     return next(error)
   }

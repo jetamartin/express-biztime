@@ -10,14 +10,14 @@ beforeEach(async () => {
   const compResults = await db.query(`
     INSERT INTO
       companies (code, name, description)
-      VALUES ('apple', 'Apple Inc.', 'Maker of iOS')
+      VALUES ('apple-inc.', 'Apple Inc.', 'Maker of iOS')
       RETURNING code, name, description`);
     testCompanies = compResults.rows[0];
 
   const invResults = await db.query(`
     INSERT INTO 
       invoices (comp_code, amt, paid, paid_date)
-      VALUES ('apple', 100, true, '2018-01-01')
+      VALUES ('apple-inc.', 100, true, null)
       RETURNING id, comp_code`);
  
     testInvoices = invResults.rows[0];
@@ -81,7 +81,7 @@ describe('GET /invoices/:id', () => {
         'amt': 100,
         'paid': true,
         'add_date': expect.any(String), 
-        'paid_date': expect.any(String),
+        'paid_date': null,
         'company': testCompanies
       }
 
@@ -109,12 +109,12 @@ describe('GET /invoices/:id', () => {
 describe('POST /invoices', () => {
   test ("Create a new invoice", async () => {
     const response = await request(app).post('/invoices').send({
-      'comp_code': 'apple',
+      'comp_code': 'apple-inc.',
       'amt': 200,
       'paid': false
      });
 
-    // debugger;
+    debugger;
 
     expect(response.statusCode).toEqual(201);
     expect(response.body).toEqual({
@@ -134,10 +134,52 @@ describe('POST /invoices', () => {
  * Editing an existing invoices information
  */
 describe('PUT /invoices/:code', () => {
-  test ("Edit and existing invoice", async () => {
-
+  test ("User wants to pay invoice and current record's paid_date = null", async () => {
+    // Paid flag set to true and current paid_date is null
     const response = await request(app).put(`/invoices/${testInvoices.id}`).send({
-      amt : 800
+      amt : 800,
+      paid: true
+    });
+
+    // debugger;
+    expect(response.statusCode).toEqual(200);
+    expect(response.body).toEqual({
+      'invoice': {
+        'id': testInvoices.id,
+        'comp_code': testInvoices.comp_code,
+        'amt': 800,
+        'paid': true,
+        'add_date': expect.any(String), 
+        'paid_date': expect.any(String)  
+      }
+    });
+   });
+
+  test ("User does not want to pay invoice (Paid = false)", async () => {
+    // Paid flag set to false and current paid_date is null
+    const response = await request(app).put(`/invoices/${testInvoices.id}`).send({
+      amt : 800,
+      paid: false
+    });
+
+    // debugger;
+    expect(response.statusCode).toEqual(200);
+    expect(response.body).toEqual({
+      'invoice': {
+        'id': testInvoices.id,
+        'comp_code': testInvoices.comp_code,
+        'amt': 800,
+        'paid': false,
+        'add_date': expect.any(String), 
+        'paid_date': null  
+      }
+    });
+   });
+  test ("User wants to pay the invoice but current record's paid_date is not null", async () => {
+    // Paid flag set to true and current paid_date is null
+    const response = await request(app).put(`/invoices/${testInvoices.id}`).send({
+      amt : 800,
+      paid: true
     });
 
     // debugger;
@@ -150,10 +192,10 @@ describe('PUT /invoices/:code', () => {
         'paid': true,
         'add_date': expect.any(String), 
         'paid_date': expect.any(String) 
+
       }
     });
    });
-
    test ("Company code does not exist (Generate 404 response)", async () => {
     const response = await request(app).put(`/companies/XYZ`)
     .send({
