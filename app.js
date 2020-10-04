@@ -11,9 +11,13 @@ app.use(express.json());
 // Use routes defined in routes/companies file
 const companyRoutes = require("./routes/companies")
 const invoiceRoutes = require("./routes/invoices")
+const industryRoutes = require("./routes/industries")
+const industryCompanyRoutes = require("./routes/industry_company")
+
 app.use("/companies", companyRoutes )
 app.use("/invoices", invoiceRoutes)
-
+app.use("/industries", industryRoutes)
+app.use("/industry_company", industryCompanyRoutes )
 
 
 /** 404 handler */

@@ -48,8 +48,6 @@ router.get('/:code', async (req, res, next ) => {
         [code]
     )
 
-    debugger;
-
     if (compResult.rows.length === 0) throw new ExpressError(`Company: '${code}' could not be found`, 404)
 
     const company = compResult.rows[0];
